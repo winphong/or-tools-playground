@@ -143,14 +143,14 @@ def main():
     # pylint: disable = g-complex-comprehension
     # Maximize assignment to user that has the highest priority (in terms of absenteeism)
     # [START maximize_assignment_to_user_wrt_priority]
-    # model.Maximize(
-    #     sum(
-    #         shifts[n, d, s] * shifts_data[n][d][s][0] * n
-    #         for n in all_staff
-    #         for d in all_days
-    #         for s in all_shifts
-    #     )
-    # )
+    model.Maximize(
+        sum(
+            shifts[n, d, s] * shifts_data[n][d][s][0] * n
+            for n in all_staff
+            for d in all_days
+            for s in all_shifts
+        )
+    )
     # [END maximize_assignment_to_user_wrt_priority]
     #
     # Output:
@@ -192,14 +192,14 @@ def main():
     #
     # Maximize hours assigned across the week
     # [START maximize_hours_assigned]
-    model.Maximize(
-        sum(
-            shifts[n, d, s] * shifts_data[n][d][s][1]
-            for n in all_staff
-            for d in all_days
-            for s in all_shifts
-        )
-    )
+    # model.Maximize(
+    #     sum(
+    #         shifts[n, d, s] * shifts_data[n][d][s][1]
+    #         for n in all_staff
+    #         for d in all_days
+    #         for s in all_shifts
+    #     )
+    # )
     # [END maximize_hours_assigned]
     #
     # Output:
@@ -257,6 +257,9 @@ def main():
                     if shifts_data[n][d][s][0] == 1:
                         print('Staff', n, 'works shift',
                               s, '-', shifts_data[n][d][s][1], 'hours')
+
+                    else:
+                        print("WF")
         print()
 
     # Statistics.
