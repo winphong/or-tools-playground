@@ -143,30 +143,100 @@ def main():
     # pylint: disable = g-complex-comprehension
     # Maximize assignment to user that has the highest priority (in terms of absenteeism)
     # [START maximize_assignment_to_user_wrt_priority]
-    model.Maximize(
-        sum(
-            shifts[n, d, s] * shifts_data[n][d][s][0] * n
-            for n in all_staff
-            for d in all_days
-            for s in all_shifts
-        )
-    )
-    # [END maximize_assignment_to_user_wrt_priority]
-    #
-    # ==========================================================
-    #
-    # Maximize hours assigned across the week
-    # [START maximize_hours_assigned]
     # model.Maximize(
     #     sum(
-    #         shifts[n, d, s] * shifts_data[n][d][s][1]
+    #         shifts[n, d, s] * shifts_data[n][d][s][0] * n
     #         for n in all_staff
     #         for d in all_days
     #         for s in all_shifts
     #     )
     # )
+    # [END maximize_assignment_to_user_wrt_priority]
+    #
+    # Output:
+    # Day 0
+    # Staff 16 works shift 0 - 12 hours
+    # Staff 17 works shift 1 - 8 hours
+
+    # Day 1
+    # Staff 15 works shift 2 - 20 hours
+    # Staff 16 works shift 3 - 18 hours
+
+    # Day 2
+    # Staff 15 works shift 5 - 15 hours
+    # Staff 16 works shift 6 - 6 hours
+    # Staff 17 works shift 4 - 7 hours
+
+    # Day 3
+    # Staff 17 works shift 7 - 12 hours
+
+    # Day 4
+    # Staff 14 works shift 9 - 20 hours
+    # Staff 17 works shift 8 - 8 hours
+
+    # Day 5
+    # Staff 12 works shift 14 - 4 hours
+    # Staff 13 works shift 15 - 6 hours
+    # Staff 14 works shift 13 - 3 hours
+    # Staff 15 works shift 11 - 4 hours
+    # Staff 16 works shift 12 - 2 hours
+    # Staff 17 works shift 10 - 2 hours
+
+    # Day 6
+    # Staff 13 works shift 20 - 4 hours
+    # Staff 14 works shift 16 - 8 hours
+    # Staff 15 works shift 18 - 3 hours
+    # Staff 16 works shift 17 - 2 hours
+    # Staff 17 works shift 19 - 1 hours
+    # ==========================================================
+    #
+    # Maximize hours assigned across the week
+    # [START maximize_hours_assigned]
+    model.Maximize(
+        sum(
+            shifts[n, d, s] * shifts_data[n][d][s][1]
+            for n in all_staff
+            for d in all_days
+            for s in all_shifts
+        )
+    )
     # [END maximize_hours_assigned]
     #
+    # Output:
+    # Day 0
+    # Staff 0 works shift 0 - 12 hours
+    # Staff 2 works shift 1 - 8 hours
+
+    # Day 1
+    # Staff 3 works shift 2 - 20 hours
+    # Staff 5 works shift 3 - 18 hours
+
+    # Day 2
+    # Staff 1 works shift 6 - 6 hours
+    # Staff 2 works shift 4 - 7 hours
+    # Staff 16 works shift 5 - 15 hours
+
+    # Day 3
+    # Staff 15 works shift 7 - 12 hours
+
+    # Day 4
+    # Staff 0 works shift 9 - 20 hours
+    # Staff 2 works shift 8 - 8 hours
+
+    # Day 5
+    # Staff 0 works shift 10 - 2 hours
+    # Staff 1 works shift 14 - 4 hours
+    # Staff 2 works shift 15 - 6 hours
+    # Staff 3 works shift 13 - 3 hours
+    # Staff 4 works shift 12 - 2 hours
+    # Staff 15 works shift 11 - 4 hours
+
+    # Day 6
+    # Staff 0 works shift 16 - 8 hours
+    # Staff 1 works shift 18 - 3 hours
+    # Staff 6 works shift 19 - 1 hours
+    # Staff 15 works shift 17 - 2 hours
+    # Staff 16 works shift 20 - 4 hours
     # ==========================================================
 
     # Creates the solver and solve.
@@ -186,9 +256,7 @@ def main():
                 if solver.Value(shifts[(n, d, s)]) == 1:
                     if shifts_data[n][d][s][0] == 1:
                         print('Staff', n, 'works shift',
-                              s, '(with availability).', shifts_data[n][d][s][1])
-                    else:
-                        print("wtf")
+                              s, '-', shifts_data[n][d][s][1], 'hours')
         print()
 
     # Statistics.
