@@ -32,10 +32,12 @@ shiftSlots = {
     10: {'shiftSlotId': 10, 'start': 10, 'end': 18, 'hours': 8},
     11: {'shiftSlotId': 11, 'start': 12, 'end': 20, 'hours': 8},
     12: {'shiftSlotId': 12, 'start': 14, 'end': 22, 'hours': 8},
-    13: {'shiftSlotId': 13, 'start': 15, 'end': 18, 'hours': 3},
-    14: {'shiftSlotId': 14, 'start': 6, 'end': 10, 'hours': 4},
-    15: {'shiftSlotId': 15, 'start': 2, 'end': 8, 'hours': 6},
-    16: {'shiftSlotId': 16, 'start': 10, 'end': 18, 'hours': 8},
+    13: {'shiftSlotId': 13, 'start': 16, 'end': 24, 'hours': 8},
+    14: {'shiftSlotId': 14, 'start': 10, 'end': 18, 'hours': 8},
+    # overlapping shiftSlots across day
+    15: {'shiftSlotId': 15, 'start': 19, 'end': 5, 'hours': 10},
+    16: {'shiftSlotId': 16, 'start': 4, 'end': 14, 'hours': 10},
+    # overlapping shiftSlots across day
     17: {'shiftSlotId': 17, 'start': 20, 'end': 22, 'hours': 2},
     # 18: {'shiftSlotId': 18, 'start': 13, 'end': 16, 'hours': 3},
     # 19: {'shiftSlotId': 19, 'start': 2, 'end': 3, 'hours': 1},
@@ -60,9 +62,9 @@ staff_dict = {
     12: {'userId': 'elijah_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
     13: {'userId': 'phillip_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
     14: {'userId': 'marcel_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
-    15: {'userId': 'winston_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
+    15: {'userId': 'winston_1', 'daily_ot_limit': 10, 'weekly_ot_limit': 46},
     16: {'userId': 'arial_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
-    17: {'userId': 'tina_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
+    17: {'userId': 'tina_1', 'daily_ot_limit': 10, 'weekly_ot_limit': 46},
 }
 
 shifts_data = []
@@ -72,20 +74,21 @@ for staff in range(len(staff_dict)):
         shifts_data[staff].append([])
         for shift in range(len(shiftSlots)):
             if (shift in days[day]):
-                clashing_shiftSlots = []
-                for i in days[day]:
-                    if (i == shift):
-                        continue
-                    # if clashing
-                    if (not (shiftSlots[shift]['end'] <= shiftSlots[i][
-                            'start'] and shiftSlots[shift]['start'] >= shiftSlots[i]['end'])):
-                        clashing_shiftSlots.append(shiftSlots[i])
+                # clashing_shiftSlots = []
+                # for i in days[day]:
+                #     if (i == shift):
+                #         continue
+                #     # if clashing
+                #     if (not (shiftSlots[shift]['end'] <= shiftSlots[i][
+                #             'start'] and shiftSlots[shift]['start'] >= shiftSlots[i]['end'])):
+                #         clashing_shiftSlots.append(shiftSlots[i])
 
                 shifts_data[staff][day].append(
                     [
                         1,
                         (shiftSlots[shift]['start'], shiftSlots[shift]['end']),
-                        clashing_shiftSlots,
+                        # clashing_shiftSlots,
+                        [],
                         shiftSlots[shift]['hours']
                     ])
             else:
@@ -136,18 +139,22 @@ def main():
     # =======================================================================================
     #
     # Each staff works at most n hour per week according to weekly OT limit.
-    # [START at_most_x_hours]
+    # [START at_most_n_weekly_hours]
     for n in all_staff:
         model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][3]
                   for d in all_days for s in all_shifts) <= staff_dict[n]['weekly_ot_limit'])
-    # [END at_most_x_hours]
+    # [END at_most_n_weekly_hours]
     #
-
+    # =======================================================================================
+    #
+    # Each staff works at most m hour per day according to daily OT limit.
+    # [START at_most_m_daily_hours]
     for n in all_staff:
         for d in all_days:
             model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][3]
                           for s in all_shifts) <= staff_dict[n]['daily_ot_limit'])
-
+    # [END at_most_m_daily_hours]
+    #
     # =======================================================================================
     #
     # There should not be any clashing shiftSlot within a day
@@ -168,14 +175,21 @@ def main():
     #
     # ======================================================================================
     #
-    # Each staff works at most one shift per day.
-    # [START at_most_one_shift]
-    # NOTE: Work 1 shift per day
-    # for n in all_staff:
-    #     for d in all_days:
-    #         model.Add(sum(shifts[(n, d, s)] for s in days[day]) <= 1)
-    # [END at_most_one_shift]
+    # There should not be any clashing shiftSlot within a day
+    # [START no_clashing_shiftSlots_within_a_day]
+    for n in all_staff:
+        for d in range(len(days)-1):
+            for s in days[d]:
+                for s1 in days[d+1]:
+                    overnight_shiftSlot = shiftSlots[s]['end'] < shiftSlots[s]['start']
+
+                    if (overnight_shiftSlot):
+                        clashing_across_day = shiftSlots[s]['end'] > shiftSlots[s1]['start']
+                        model.Add(
+                            (shifts[n, d, s] + shifts[n, d+1, s1]) * clashing_across_day != 2)
+    # [END no_clashing_shiftSlots_within_a_day]
     #
+    # ======================================================================================
 
     model.Maximize(
         sum(
@@ -203,7 +217,7 @@ def main():
                 if solver.Value(shifts[n, d, s]) == 1:
                     if shifts_data[n][d][s][0] == 1:
                         print('Staff', n, 'works shift',
-                              s, '-', shifts_data[n][d][s][1], 'hours')
+                              s, '-', shifts_data[n][d][s][3], 'hours', shifts_data[n][d][s][1])
 
                     else:
                         print("WF")
