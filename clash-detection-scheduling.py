@@ -175,8 +175,8 @@ def main():
     #
     # ======================================================================================
     #
-    # There should not be any clashing shiftSlot within a day
-    # [START no_clashing_shiftSlots_within_a_day]
+    # There should not be any clashing shiftSlot across 2 consecutive day
+    # [START no_clashing_shiftSlots_across_day]
     for n in all_staff:
         for d in range(len(days)-1):
             for s in days[d]:
@@ -187,7 +187,27 @@ def main():
                         clashing_across_day = shiftSlots[s]['end'] > shiftSlots[s1]['start']
                         model.Add(
                             (shifts[n, d, s] + shifts[n, d+1, s1]) * clashing_across_day != 2)
-    # [END no_clashing_shiftSlots_within_a_day]
+    # [END no_clashing_shiftSlots_across_day]
+    #
+    # ======================================================================================
+    #
+    # User should not be assigned shiftSlots for 5 consecutive days
+    # [START no_5_consecutive_days]
+    for n in all_staff:
+        for d in all_days:
+            model.Add(sum(shifts[n, (d + d1) % 7, s]
+                      for d1 in range(5) for s in all_shifts) < 5)
+    # [END no_5_consecutive_days]
+    #
+    # ======================================================================================
+    #
+    # User should not be assigned shiftSlots for 5 consecutive days
+    # [START no_5_consecutive_days]
+    for n in all_staff:
+        for d in all_days:
+            model.Add(sum(shifts[n, (d + d1) % 7, s]
+                      for d1 in range(5) for s in all_shifts) < 5)
+    # [END no_5_consecutive_days]
     #
     # ======================================================================================
 
