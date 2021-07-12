@@ -15,16 +15,16 @@ days = {
     3: [7],
     4: [8, 9],
     5: [10, 11, 12, 13, 14, 15],
-    6: [16, 17],
+    6: [16, 17, 18, 19, 20],
 }
 
 shiftSlots = {
     0: {'shiftSlotId': 0, 'start': 12, 'end': 20, 'hours': 8},
     1: {'shiftSlotId': 1, 'start': 8, 'end': 16, 'hours': 8},
     2: {'shiftSlotId': 2, 'start': 3, 'end': 5, 'hours': 2},
-    3: {'shiftSlotId': 3, 'start': 0, 'end': 18, 'hours': 18},
+    3: {'shiftSlotId': 3, 'start': 0, 'end': 8, 'hours': 8},
     4: {'shiftSlotId': 4, 'start': 8, 'end': 15, 'hours': 7},
-    5: {'shiftSlotId': 5, 'start': 5, 'end': 20, 'hours': 15},
+    5: {'shiftSlotId': 5, 'start': 5, 'end': 10, 'hours': 5},
     6: {'shiftSlotId': 6, 'start': 8, 'end': 14, 'hours': 6},
     7: {'shiftSlotId': 7, 'start': 8, 'end': 16, 'hours': 8},
     8: {'shiftSlotId': 8, 'start': 8, 'end': 16, 'hours': 8},
@@ -39,12 +39,12 @@ shiftSlots = {
     16: {'shiftSlotId': 16, 'start': 13, 'end': 23, 'hours': 10},
     # overlapping shiftSlots across day
     17: {'shiftSlotId': 17, 'start': 11, 'end': 21, 'hours': 10},
-    # 18: {'shiftSlotId': 18, 'start': 13, 'end': 16, 'hours': 3},
-    # 19: {'shiftSlotId': 19, 'start': 2, 'end': 3, 'hours': 1},
-    # 20: {'shiftSlotId': 20, 'start': 1, 'end': 5, 'hours': 4},
+    18: {'shiftSlotId': 18, 'start': 13, 'end': 16, 'hours': 3},
+    19: {'shiftSlotId': 19, 'start': 2, 'end': 3, 'hours': 1},
+    20: {'shiftSlotId': 20, 'start': 1, 'end': 5, 'hours': 4},
 }
 
-# assuming ordered by absentism rate in descending order (worst to best)
+# assuming ordered by absentism rate in descending order (best to worse)
 staff_dict = {
     # to convert to minutes
     0: {'userId': 'marcus', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
@@ -74,33 +74,21 @@ for staff in range(len(staff_dict)):
         shifts_data[staff].append([])
         for shift in range(len(shiftSlots)):
             if (shift in days[day]):
-                # clashing_shiftSlots = []
-                # for i in days[day]:
-                #     if (i == shift):
-                #         continue
-                #     # if clashing
-                #     if (not (shiftSlots[shift]['end'] <= shiftSlots[i][
-                #             'start'] and shiftSlots[shift]['start'] >= shiftSlots[i]['end'])):
-                #         clashing_shiftSlots.append(shiftSlots[i])
-
                 shifts_data[staff][day].append(
                     [
                         1,
+                        shiftSlots[shift]['hours'],
                         (shiftSlots[shift]['start'], shiftSlots[shift]['end']),
-                        # clashing_shiftSlots,
-                        [],
-                        shiftSlots[shift]['hours']
                     ])
             else:
                 shifts_data[staff][day].append(
-                    [0, (0, 0), [], 0])
+                    [0, 0, (0, 0)])
 
 # print(json.dumps(shifts_data[0]))
 
 
 def main():
     # This program tries to find an optimal assignment of all_staff to shifts
-    # Each staff can request to be assigned to specific shifts.
     all_staff = range(len(staff_dict))
     all_shifts = range(len(shiftSlots))
     all_days = range(len(days))
@@ -130,7 +118,7 @@ def main():
     # Each staff works at most n hour per week according to weekly OT limit.
     # [START at_most_n_weekly_hours]
     for n in all_staff:
-        model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][3]
+        model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][1]
                   for d in all_days for s in all_shifts) <= staff_dict[n]['weekly_ot_limit'])
     # [END at_most_n_weekly_hours]
     #
@@ -140,7 +128,7 @@ def main():
     # [START at_most_m_daily_hours]
     for n in all_staff:
         for d in all_days:
-            model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][3]
+            model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][1]
                           for s in all_shifts) <= staff_dict[n]['daily_ot_limit'])
     # [END at_most_m_daily_hours]
     #
@@ -200,6 +188,8 @@ def main():
     # ======================================================================================
 
     # TODO: Equal hour
+
+    # Maximize assignment of shiftSlot to user with higher rating
     model.Maximize(
         sum(
             shifts[n, d, s] * shifts_data[n][d][s][0] * n
@@ -226,7 +216,7 @@ def main():
                 if solver.Value(shifts[n, d, s]) == 1:
                     if shifts_data[n][d][s][0] == 1:
                         print('Staff', n, 'works shift',
-                              s, '-', shifts_data[n][d][s][3], 'hours', shifts_data[n][d][s][1])
+                              s, '-', shifts_data[n][d][s][1], 'hours', shifts_data[n][d][s][2])
         print()
 
     # Statistics.
