@@ -1,46 +1,40 @@
 from ortools.sat.python import cp_model
 
 days = {
-    # 0: [0, 1],
-    # 1: [2],
-    # 2: [3],
-    # 3: [4, 5, 6],
-    # 4: [],
-    # 5: [],
-    # 6: [],
-    0: [0, 1],
-    1: [2, 3],
-    2: [4, 5, 6],
-    3: [7],
-    4: [8, 9],
-    5: [10, 11, 12, 13, 14, 15],
-    6: [16, 17, 18, 19, 20],
+    0: range(0, 15),
+    1: range(15, 30),
+    2: range(30, 45),
+    3: range(45, 60),
+    4: range(60, 75),
+    5: range(75, 90),
+    6: range(90, 105),
 }
 
-shiftSlots = {
-    0: {'shiftSlotId': 0, 'start': 12, 'end': 20, 'hours': 8},
-    1: {'shiftSlotId': 1, 'start': 8, 'end': 16, 'hours': 8},
-    2: {'shiftSlotId': 2, 'start': 3, 'end': 5, 'hours': 2},
-    3: {'shiftSlotId': 3, 'start': 0, 'end': 8, 'hours': 8},
-    4: {'shiftSlotId': 4, 'start': 8, 'end': 15, 'hours': 7},
-    5: {'shiftSlotId': 5, 'start': 5, 'end': 10, 'hours': 5},
-    6: {'shiftSlotId': 6, 'start': 8, 'end': 14, 'hours': 6},
-    7: {'shiftSlotId': 7, 'start': 8, 'end': 16, 'hours': 8},
-    8: {'shiftSlotId': 8, 'start': 8, 'end': 16, 'hours': 8},
-    9: {'shiftSlotId': 9, 'start': 2, 'end': 22, 'hours': 20},
-    10: {'shiftSlotId': 10, 'start': 10, 'end': 18, 'hours': 8},
-    11: {'shiftSlotId': 11, 'start': 12, 'end': 20, 'hours': 8},
-    12: {'shiftSlotId': 12, 'start': 14, 'end': 22, 'hours': 8},
-    13: {'shiftSlotId': 13, 'start': 16, 'end': 24, 'hours': 8},
-    14: {'shiftSlotId': 14, 'start': 10, 'end': 18, 'hours': 8},
-    # overlapping shiftSlots across day
-    15: {'shiftSlotId': 15, 'start': 19, 'end': 5, 'hours': 10},
-    16: {'shiftSlotId': 16, 'start': 13, 'end': 23, 'hours': 10},
-    17: {'shiftSlotId': 17, 'start': 11, 'end': 21, 'hours': 10},
-    18: {'shiftSlotId': 18, 'start': 13, 'end': 16, 'hours': 3},
-    19: {'shiftSlotId': 19, 'start': 2, 'end': 3, 'hours': 1},
-    20: {'shiftSlotId': 20, 'start': 1, 'end': 5, 'hours': 4},
-}
+shiftSlots = {}
+for day in range(len(days)):
+    for shiftSlotId in days[day]:
+
+        if (shiftSlotId % 15 < 5):
+            shiftSlots[shiftSlotId] = {'shiftSlotId': shiftSlotId,
+                                       'start': 7,
+                                       'end': 15,
+                                       'hours': 8
+                                       }
+            continue
+
+        if (shiftSlotId % 15 < 10):
+            shiftSlots[shiftSlotId] = {'shiftSlotId': shiftSlotId,
+                                       'start': 13,
+                                       'end': 21,
+                                       'hours': 8
+                                       }
+            continue
+
+        shiftSlots[shiftSlotId] = {'shiftSlotId': shiftSlotId,
+                                   'start': 21,
+                                   'end': 7,
+                                   'hours': 10
+                                   }
 
 # assuming ordered by absentism rate in ascending order (worst to best)
 staff_dict = {
@@ -48,15 +42,15 @@ staff_dict = {
     0: {'userId': 'marcus', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
     1: {'userId': 'cherry', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
     2: {'userId': 'daniel', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
-    3: {'userId': 'elijah', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
+    3: {'userId': 'elijah', 'daily_ot_limit': 10, 'weekly_ot_limit': 46},
     4: {'userId': 'phillip', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
     5: {'userId': 'marcel', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
-    6: {'userId': 'winston', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
+    6: {'userId': 'winston', 'daily_ot_limit': 10, 'weekly_ot_limit': 46},
     7: {'userId': 'arial', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
-    8: {'userId': 'tina', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
+    8: {'userId': 'tina', 'daily_ot_limit': 10, 'weekly_ot_limit': 46},
     9: {'userId': 'marcus_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
     10: {'userId': 'cherry_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
-    11: {'userId': 'daniel_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
+    11: {'userId': 'daniel_1', 'daily_ot_limit': 10, 'weekly_ot_limit': 46},
     12: {'userId': 'elijah_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
     13: {'userId': 'phillip_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 44},
     14: {'userId': 'marcel_1', 'daily_ot_limit': 8, 'weekly_ot_limit': 46},
@@ -183,8 +177,6 @@ def main():
     # [END no_5_consecutive_days]
     #
     # ======================================================================================
-
-    # TODO: Equal hour
 
     # == Maximize assignment of shiftSlot to user with higher rating ==
     # User with highest rating will be sorted to the end of the list
