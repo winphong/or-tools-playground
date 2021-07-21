@@ -1,4 +1,6 @@
 from ortools.sat.python import cp_model
+import json
+import time
 
 days = {
     0: [0, 1],
@@ -69,12 +71,14 @@ for staff in range(len(staff_dict)):
                 shifts_data[staff][day].append(
                     [
                         1,
-                        shiftSlots[shift]['hours'],
+                        0,
+                        # not actually used
                         (shiftSlots[shift]['start'], shiftSlots[shift]['end']),
+                        shiftSlots[shift]['hours'],  # not actually used
                     ])
             else:
                 shifts_data[staff][day].append(
-                    [0, 0, (0, 0)])
+                    [0, 0])
 
 # print(json.dumps(shifts_data[0]))
 
@@ -114,7 +118,7 @@ def main():
     # [START at_most_n_weekly_hours]
     for n in all_staff:
         # Constraint 2
-        model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][1]
+        model.Add(sum(shifts[(n, d, s)] * shiftSlots[s]['hours']
                   for d in all_days for s in all_shifts) <= staff_dict[n]['weekly_ot_limit'])
     # [END at_most_n_weekly_hours]
     #
@@ -126,7 +130,7 @@ def main():
     for n in all_staff:
         for d in all_days:
             # Constraint 3
-            model.Add(sum(shifts[(n, d, s)] * shifts_data[n][d][s][1]
+            model.Add(sum(shifts[(n, d, s)] * shiftSlots[s]['hours']
                           for s in all_shifts) <= staff_dict[n]['daily_ot_limit'])
     # [END at_most_m_daily_hours]
     #
@@ -134,10 +138,15 @@ def main():
     #
     # Constraint 4:
     # - There should not be any clashing shiftSlot within a day
+    #
     # [START no_clashing_shiftSlots_within_a_day]
     for n in all_staff:
         for d in all_days:
             for s in days[d]:
+                # If the shift was previously assigned to user, ensure that it's assigned in this round of autoschedule run
+                if (shifts_data[n][d][s][1]):
+                    model.Add(shifts[n, d, s] == 1)
+
                 for s1 in days[d]:
                     if (s == s1):
                         continue
@@ -164,7 +173,6 @@ def main():
             for s in days[d]:
                 for s1 in days[(d+1) % 7]:
                     overnight_shiftSlot = shiftSlots[s]['end'] < shiftSlots[s]['start']
-
                     if (overnight_shiftSlot):
                         clashing_across_day = shiftSlots[s]['end'] > shiftSlots[s1]['start']
                         # Constraint 5
@@ -179,29 +187,29 @@ def main():
                             (shifts[n, d, s] + shifts[n, (d+1) % 7, s1]) *
                             same_day_less_than_n_hours_gap != 2
                         )
+                        continue
 
-                        end_late_shift = shiftSlots[s]['end'] >= 22
-
+                    end_late_shift = shiftSlots[s]['end'] >= 22
+                    if (end_late_shift):
+                        cross_day_less_than_n_hours_gap = (
+                            shiftSlots[s1]['start'] + 24 - shiftSlots[s]['end']) < hours_gap
                         # Constraint 7
-                        if (end_late_shift):
-                            cross_day_less_than_n_hours_gap = (
-                                shiftSlots[s1]['start'] + 24 - shiftSlots[s]['end']) < hours_gap
-
-                            model.Add(
-                                (shifts[n, d, s] + shifts[n, (d+1) % 7, s1]) * cross_day_less_than_n_hours_gap != 2)
+                        model.Add(
+                            (shifts[n, d, s] + shifts[n, (d+1) % 7, s1]) * cross_day_less_than_n_hours_gap != 2)
     # [END constraint_5&6&7]
     #
     # ======================================================================================
     #
     # Constraint 8:
-    # - User should not be assigned shiftSlots for 5 consecutive days
-    # [START no_5_consecutive_days]
+    # - User should be assigned maximum N-consecutive days
+    # [START max_consecutive_days]
+    max_consecutive_days = 4
     for n in all_staff:
         for d in all_days:
             # Constraint 8
             model.Add(sum(shifts[n, (d + d1) % 7, s]
-                      for d1 in range(5) for s in all_shifts) < 5)
-    # [END no_5_consecutive_days]
+                      for d1 in range(5) for s in all_shifts) <= max_consecutive_days)
+    # [END max_consecutive_days]
     #
     # ======================================================================================
 
@@ -237,7 +245,7 @@ def main():
 
     # Creates the solver and solve.
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 5
+    solver.parameters.max_time_in_seconds = 60
     status = solver.Solve(model)
 
     if (status == cp_model.INFEASIBLE):
@@ -254,9 +262,11 @@ def main():
         for n in all_staff:
             for s in all_shifts:
                 if solver.Value(shifts[n, d, s]) == 1:
-                    if shifts_data[n][d][s][0] == 1:
+                    if shifts_data[n][d][s][0] == 1 or shifts_data[n][d][s][1] == 1:
                         print('Staff', n, 'works shift',
-                              s, '-', shifts_data[n][d][s][1], 'hours', shifts_data[n][d][s][2])
+                              s, '-', shiftSlots[s]['hours'], 'hours', '(%i-%i)' % (
+                                  shiftSlots[s]['start'], shiftSlots[s]['end']),
+                              'fulltimer' if staff_dict[(n)]['fulltime'] == 1 else 'parttimer')
                         output[n].append(s)
 
         print()
@@ -270,4 +280,7 @@ def main():
 
 
 if __name__ == '__main__':
+    total_start = time.perf_counter()
     main()
+    total_end = time.perf_counter()
+    print(total_end-total_start)
